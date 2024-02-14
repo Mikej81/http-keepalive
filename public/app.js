@@ -8,6 +8,7 @@ document.addEventListener('DOMContentLoaded', function () {
         event.preventDefault(); // Prevent the default form submission
 
         const domainInput = document.getElementById('domain').value;
+
         const data = { domain: domainInput };
 
         console.log('Analyzing domain:', domainInput); // Debugging line to confirm function execution
@@ -37,6 +38,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     function displayResults(data) {
         const resultsDiv = document.getElementById('results');
+        const dnsDiv = document.getElementById('dns_results');
 
         // Convert keepAliveTimeout to a number if possible, else default to 0
         let keepAliveTimeout = parseInt(data.keepAliveTimeout, 10);
@@ -57,6 +59,28 @@ document.addEventListener('DOMContentLoaded', function () {
         // Here you could also call a function to update a chart with the keepAliveTimeout value
         // For example, if displaying multiple domains' keep-alive values in a bar chart
         updateChart(data.domain, keepAliveTimeout, data.requestDuration);
+
+        const dns_content = `
+        <hr class="rounded">
+        <h3>DNS Results</h3>
+        <table>
+    <tr>
+        <th>Type</th>
+        <th>Value</th>
+    </tr>
+    <tr>
+        <td>CNAME</td>
+        <td>${data.cnameRecords}</td>
+    </tr>
+    <tr>
+    <td>A</td>
+    <td>${data.aRecords}</td>
+    </tr>
+    </table>
+
+        `;
+
+        dnsDiv.innerHTML = `<p>${dns_content}</p>`;
     }
 
     function resetCanvas() {

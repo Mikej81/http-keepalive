@@ -3,7 +3,8 @@ const bodyParser = require('body-parser');
 const axios = require('axios');
 const path = require('path');
 const https = require('https');
-const http2 = require('http2');
+
+const dns = require('dns').promises;
 
 const app = express();
 const port = 3000;
@@ -21,6 +22,37 @@ app.get('/', (req, res) => {
 const httpsAgent = new https.Agent({
     rejectUnauthorized: false, // This bypasses SSL certificate validation. Use with caution!
 });
+
+async function resolveCnameAndARecords(domain) {
+    try {
+        // Resolve CNAME records
+        let cnameRecords = [];
+        try {
+            cnameRecords = await dns.resolveCname(domain);
+        } catch (err) {
+            if (err.code !== 'ENODATA' && err.code !== 'ENOTFOUND') {
+                throw err; // Rethrow error if it's not a lack of CNAME records
+            }
+            // If no CNAME records or not found, leave cnameRecords as an empty array
+        }
+
+        // Resolve A records
+        let aRecords = [];
+        try {
+            aRecords = await dns.resolve(domain, 'A');
+        } catch (err) {
+            if (err.code !== 'ENODATA' && err.code !== 'ENOTFOUND') {
+                throw err; // Rethrow error if it's not a lack of A records
+            }
+            // If no A records or not found, leave aRecords as an empty array
+        }
+
+        return { cnameRecords, aRecords };
+    } catch (error) {
+        console.error('Failed to resolve DNS records:', error);
+        throw error; // Rethrow to be handled by the caller
+    }
+}
 
 function httpsGetWithTLSInfo(url) {
     return new Promise((resolve, reject) => {
@@ -71,12 +103,14 @@ app.post('/analyze', async (req, res) => {
             domain = `https://${domain}`; // Default to https if no protocol is specified
         }
 
+        const parsedUrl = new URL(domain);
+        const dnsDomain = parsedUrl.hostname;
+
         const startTime = Date.now(); // Capture start time
 
         // Await the response from httpsGetWithTLSInfo directly
         const { data, tlsVersion, headers } = await httpsGetWithTLSInfo(domain);
 
-        // Initialize timeoutValue with a default
         let timeoutValue = "Not Defined";
         let connectionHeader = "Not Defined";
 
@@ -93,18 +127,31 @@ app.post('/analyze', async (req, res) => {
             connectionHeader = headers['connection'];
         }
 
+        // Await DNS resolution
+        const { cnameRecords, aRecords } = await resolveCnameAndARecords(dnsDomain);
+
         const endTime = Date.now(); // Capture end time
         const duration = endTime - startTime; // Calculate duration
 
-        // Return the required information
-        res.json({
+        // Construct the response object dynamically
+        const responseObj = {
             domain: domain,
             keepAliveTimeout: timeoutValue,
             requestDuration: duration,
-            tlsVersion: tlsVersion, // Ensure tlsVersion is defined outside the .then()
-            connectionHeader: connectionHeader // Add connectionHeader to the response
+            tlsVersion: tlsVersion,
+            connectionHeader: connectionHeader
+        };
 
-        });
+        // Only add DNS values to the response if they are defined and not empty
+        if (cnameRecords && cnameRecords.length > 0) {
+            responseObj.cnameRecords = cnameRecords;
+        }
+        if (aRecords && aRecords.length > 0) {
+            responseObj.aRecords = aRecords;
+        }
+
+        // Return the constructed response
+        res.json(responseObj);
 
     } catch (error) {
         console.error('Error:', error);

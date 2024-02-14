@@ -16,6 +16,23 @@
             font-family: 'Arial', sans-serif;
         }
 
+        /* Rounded border */
+        hr.rounded {
+            border-top: 5px solid #bbb;
+            border-radius: 2px;
+        }
+
+        table {
+            width: 100%;
+        }
+
+        th,
+        td {
+            border: 1px solid black;
+            border-collapse: collapse;
+            border-color: #96D4D4;
+        }
+
         .container {
             max-width: 600px;
             margin: 20px auto;
@@ -76,6 +93,7 @@
         <div id="chartContainer" style="width: 600px; height: 400px;" class="mt-3">
             <canvas id="analysisChart"></canvas>
         </div>
+        <div id="dns_results" class="mt-3"></div>
     </div>
     <script src="app.js"></script>
 </body>
