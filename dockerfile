@@ -1,19 +1,33 @@
-FROM node:18-alpine
+FROM golang:1.18 as builder
 
 LABEL maintainer="Michael Coleman Michael@f5.com"
 
-RUN mkdir -p /home/node/app/node_modules && chown -R node:node /home/node/app
+# Enable Go modules support and disable CGO
+ENV GO111MODULE=on \
+    CGO_ENABLED=0
 
-WORKDIR /home/node/app
+WORKDIR /app
 
-COPY package*.json ./
+# Copy the go mod and sum files first to leverage Docker cache layering
+COPY go.mod ./
+COPY public ./public 
 
-RUN npm install
+RUN go mod download
 
-COPY --chown=node:node . .
+COPY *.go .
+# COPY *.sum .
 
-USER node
+RUN go build -o http-keepalive -v .
+
+FROM alpine:latest  
+
+RUN apk --no-cache add ca-certificates
+
+WORKDIR /root/
+
+COPY --from=builder /app/http-keepalive .
+COPY --from=builder /app/public ./public
 
 EXPOSE 3000
 
-CMD [ "node", "server.js" ]
+CMD ["./http-keepalive"]
