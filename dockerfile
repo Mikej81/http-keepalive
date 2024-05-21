@@ -28,6 +28,8 @@ WORKDIR /root/
 COPY --from=builder /app/http-keepalive .
 COPY --from=builder /app/public ./public
 
+RUN chmod -R 755 .
+
 EXPOSE 3000
 
 CMD ["./http-keepalive"]

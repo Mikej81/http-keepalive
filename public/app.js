@@ -2,6 +2,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('domainForm');
     const dnsDiv = document.getElementById('dns_results');
     const tcpDiv = document.getElementById('tcp_results');
+    const resultsDiv = document.getElementById('results');
 
     form.addEventListener('submit', function (event) {
         event.preventDefault(); // Prevent the default form submission
@@ -10,6 +11,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const data = { domain: domainInput };
 
         // Clear previous results and hide the divs
+        resultsDiv.innerHTML = '';
+        resultsDiv.style.display = 'none';
         dnsDiv.innerHTML = 'Loading DNS Results...';
         dnsDiv.style.display = 'none';
         tcpDiv.innerHTML = 'Loading TCP Results...';
@@ -43,8 +46,25 @@ document.addEventListener('DOMContentLoaded', function () {
                     data.tcpResults + '</pre>';
                 tcpDiv.style.display = 'block'; // Show the div
 
+                // Convert keepAliveTimeout to a number if possible, else default to 0
+                let keepAliveTimeout = parseInt(data.keepAliveTimeout, 10);
+                if (!Number.isInteger(keepAliveTimeout)) {
+                    keepAliveTimeout = 0; // Default to 0 if the value is non-numeric or not an integer
+                }
+
+                // Create content to display
+                const content = `
+                    <h2>Analysis Results for ${data.domain}</h2>
+                    <p>Server-Side TLS Version: <b>${data.tlsVersion}</b></p>
+                    <p><span style="color: lightgrey;">[Header]</span> Keep-Alive: Timeout=${data.keepAliveTimeout}</p>
+                    <p><span style="color: lightgrey;">[Header]</span> Connection: ${data.connectionHeader}</p>
+                    <p>Request Duration: ${data.requestDuration} milliseconds</p>
+                `;
+                resultsDiv.innerHTML = content;
+                resultsDiv.style.display = 'block'; // Show the div
+
                 // Update Chart
-                updateChart(data.domain, data.keepAliveTimeout, data.requestDuration);
+                updateChart(data.domain, keepAliveTimeout, data.requestDuration);
             })
             .catch(error => {
                 console.error('Fetch Error:', error);
