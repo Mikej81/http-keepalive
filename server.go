@@ -242,7 +242,7 @@ func analyzeTCPHandshake(target string) (*TCPResults, error) {
 	results := &TCPResults{}
 	addr, err := net.ResolveTCPAddr("tcp", target)
 	if err != nil {
-		return results, fmt.Errorf("error resolving address: %v", err)
+		return results, fmt.Errorf("error resolving address: %v\n", err)
 	}
 
 	var conn net.Conn
@@ -251,13 +251,22 @@ func analyzeTCPHandshake(target string) (*TCPResults, error) {
 	conn, err = net.DialTCP("tcp", nil, addr)
 	if err == nil {
 		defer conn.Close()
+
+		// You gotta say hello!
+		httpRequest := "GET / HTTP/1.1\r\nHost: " + target + "\r\nConnection: close\r\n\r\n"
+		n, err := conn.Write([]byte(httpRequest))
+		if err != nil {
+			log.Println(n, err)
+		}
+
+		fmt.Printf("CON: Sent %d bytes: %s\n", n, httpRequest)
 	} else {
 		// If TCP connection fails, try TLS
 		conn, err = tls.Dial("tcp", target, &tls.Config{
 			InsecureSkipVerify: true,
 		})
 		if err != nil {
-			return results, fmt.Errorf("error connecting to target: %v", err)
+			return results, fmt.Errorf("error connecting to target: %v\n", err)
 		}
 		defer conn.Close()
 	}
@@ -266,17 +275,29 @@ func analyzeTCPHandshake(target string) (*TCPResults, error) {
 		// TLS connection
 		err = tlsConn.Handshake()
 		if err != nil {
-			return results, fmt.Errorf("TLS handshake error: %v", err)
+			return results, fmt.Errorf("TLS handshake error: %v\n", err)
 		}
+
+		// Send an HTTP GET request over the TLS connection
+		httpRequest := "GET / HTTP/1.1\r\nHost: " + addr.IP.String() + "\r\nConnection: close\r\n\r\n"
+		n, err := tlsConn.Write([]byte(httpRequest))
+		if err != nil {
+			return nil, fmt.Errorf("error writing to TLS connection: %v\n", err)
+		}
+		fmt.Printf("TLS-CON: Sent %d bytes: %s\n", n, httpRequest)
+
 		results.TLSVersion = tlsConn.ConnectionState().Version
 		results.CipherSuite = tlsConn.ConnectionState().CipherSuite
 	}
 
-	// You gotta say hello!
-	n, err := conn.Write([]byte("hello\n"))
-	if err != nil {
-		log.Println(n, err)
-	}
+	// // You gotta say hello!
+	// httpRequest := "GET / HTTP/1.1\r\nHost: " + target + "\r\nConnection: close\r\n\r\n"
+	// n, err := conn.Write([]byte(httpRequest))
+	// if err != nil {
+	// 	log.Println(n, err)
+	// }
+
+	// fmt.Printf("CON: Sent %d bytes: %s\n", n, httpRequest)
 
 	// Set a longer timeout to read the SYN-ACK
 	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
@@ -294,11 +315,11 @@ func analyzeTCPHandshake(target string) (*TCPResults, error) {
 			time.Sleep(100 * time.Millisecond) // Wait 100ms before retrying
 			continue
 		}
-		return results, fmt.Errorf("error reading SYN-ACK: %v", err)
+		return results, fmt.Errorf("error reading SYN-ACK: %v\n", err)
 	}
 
 	if err != nil {
-		return results, fmt.Errorf("failed to read SYN-ACK from %s after %d attempts: %v", addr, maxRetries, err)
+		return results, fmt.Errorf("failed to read SYN-ACK from %s after %d attempts: %v\n", addr, maxRetries, err)
 	}
 
 	// Analyze the SYN-ACK response and populate the results
@@ -314,7 +335,7 @@ func analyzeTCPHandshake(target string) (*TCPResults, error) {
 
 func analyzeTCPResponse(buf []byte) (*TCPResponse, error) {
 	if len(buf) < 20 {
-		return nil, fmt.Errorf("Invalid TCP packet length")
+		return nil, fmt.Errorf("Invalid TCP packet length\n")
 	}
 
 	response := &TCPResponse{
