@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const dnsDiv = document.getElementById('dns_results');
     const tcpDiv = document.getElementById('tcp_results');
     const resultsDiv = document.getElementById('results');
+    const tcpHeaderTable = document.getElementById('tcp_header');
 
     form.addEventListener('submit', function (event) {
         event.preventDefault(); // Prevent the default form submission
@@ -15,8 +16,8 @@ document.addEventListener('DOMContentLoaded', function () {
         resultsDiv.style.display = 'none';
         dnsDiv.innerHTML = 'Loading DNS Results...';
         dnsDiv.style.display = 'none';
-        tcpDiv.innerHTML = 'Loading TCP Results...';
-        tcpDiv.style.display = 'none';
+        //tcpDiv.innerHTML = 'Loading TCP Results...';
+        //tcpDiv.style.display = 'none';
 
         // Make the HTTP request using Fetch API to the server-side `/analyze` endpoint
         fetch('/analyze', {
@@ -54,16 +55,45 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 // Update TCP Results
                 if (tcpData && tcpData.tcp_response) {
-                    const tcpContent = `
-                        <h3>TCP Results</h3>
-                        <table>
-                            <tr><th>Field</th><th>Value</th></tr>
-                            ${Object.entries(tcpData.tcp_response).map(([key, value]) => `
-                                <tr><td>${key}</td><td>${value}</td></tr>
-                            `).join('')}
-                        </table>
+                    const tcpResponse = tcpData.tcp_response;
+                    const flagsContent = `
+                        SYN: ${tcpResponse.syn_flag}<br>
+                        ACK: ${tcpResponse.ack_flag}<br>
+                        FIN: ${tcpResponse.fin_flag}<br>
+                        RST: ${tcpResponse.rst_flag}<br>
+                        PSH: ${tcpResponse.psh_flag}<br>
+                        URG: ${tcpResponse.urg_flag}<br>
+                        ECE: ${tcpResponse.ece_flag}<br>
+                        CWR: ${tcpResponse.cwr_flag}
                     `;
-                    tcpDiv.innerHTML = tcpContent;
+                    const tcpHeaderContent = `
+                        <tr>
+                            <td colspan="2"><b>Source Port:</b><br/> ${tcpResponse.source_port}</td>
+                            <td colspan="2"><b>Destination Port:</b><br/> ${tcpResponse.destination_port}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="4"><b>Sequence Number:</b><br/> ${tcpResponse.sequence_number}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="4"><b>Acknowledgement Number:</b><br/> ${tcpResponse.ack_number}</td>
+                        </tr>
+                        <tr>
+                            <td><b>DO:</b><br> ${tcpResponse.data_offset}</td>
+                            <td><b>Reserved</b></td>
+                            <td><b>Flags:</b><br/>${flagsContent}</td>
+                            <td><b>Window Size:</b><br/> ${tcpResponse.window_size}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2"><b>Checksum:</b><br/> ${tcpResponse.checksum}</td>
+                            <td colspan="2"><b>Urgent Pointer:</b><br/> ${tcpResponse.urgent_pointer}</td>
+                        </tr>
+                        <tr>
+                            <td colspan="4"><b>Options:</b><br/> ${tcpResponse.tcp_options || 'None'}</td>
+                        </tr>
+                    `;
+                    if (tcpHeaderTable) {
+                        tcpHeaderTable.innerHTML = tcpHeaderContent;
+                    }
                     tcpDiv.style.display = 'block'; // Show the div
                 } else {
                     tcpDiv.innerHTML = 'No TCP Results';

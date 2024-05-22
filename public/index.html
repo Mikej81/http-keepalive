@@ -96,84 +96,33 @@
             margin-bottom: 20px;
         }
 
-        .tcp-header {
-            display: grid;
-            grid-template-columns: repeat(8, 1fr);
-            gap: 10px;
-            text-align: center;
-            grid-template-areas:
-                "srcPort srcPort dstPort dstPort dstPort dstPort seqNum seqNum"
-                "seqNum seqNum seqNum seqNum ackNum ackNum ackNum ackNum"
-                "ackNum ackNum ackNum ackNum dataOffset reserved flags flags"
-                "windowSize windowSize checksum checksum urgentPointer urgentPointer options options"
-                "options options options options options options options options";
-        }
-
-        .tcp-header div {
-            background-color: #e7e7e7;
-            padding: 5px;
-            border-radius: 4px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        #srcPort {
-            grid-area: srcPort;
-        }
-
-        #dstPort {
-            grid-area: dstPort;
-        }
-
-        #seqNum {
-            grid-area: seqNum;
-        }
-
-        #ackNum {
-            grid-area: ackNum;
-        }
-
-        #dataOffset {
-            grid-area: dataOffset;
-        }
-
-        #reserved {
-            grid-area: reserved;
-        }
-
-        #flags {
-            grid-area: flags;
-        }
-
-        #windowSize {
-            grid-area: windowSize;
-        }
-
-        #checksum {
-            grid-area: checksum;
-        }
-
-        #urgentPointer {
-            grid-area: urgentPointer;
-        }
-
-        #options {
-            grid-area: options;
-        }
-
         table {
             width: 100%;
             border-collapse: collapse;
+            margin-top: 20px;
         }
 
         th,
         td {
             border: 1px solid #ddd;
             padding: 8px;
+            text-align: center;
+            font-size: 12px;
         }
 
         th {
             background-color: #e7e7e7;
-            text-align: left;
+        }
+
+        .tcp-header-table {
+            border: 2px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .tcp-header-table th,
+        .tcp-header-table td {
+            border: 1px solid #000000;
         }
     </style>
 </head>
@@ -195,27 +144,14 @@
                 <div class="chart-container">
                     <canvas id="analysisChart"></canvas>
                 </div>
-
                 <div id="dns_results" class="analysis-section">DNS Results</div>
             </div>
             <div class="results-container">
                 <div id="results" class="analysis-section">Analysis Results</div>
                 <!-- TCP Results Section -->
-                <div id="tcp_results" class="analysis-section">TCP Results</div>
-                <!-- TCP Header Visualization -->
-                <div id="tcp_header" class="analysis-section">
-                    <h3>TCP Header</h3>
-                    <div class="tcp-header">
-                        <div id="srcPort">Src Port: </div>
-                        <div id="dstPort">Dst Port: </div>
-                        <div id="seqNum">Seq Num: </div>
-                        <div id="ackNum">Ack Num: </div>
-                        <div id="dataOffset">Data Offset: </div>
-                        <div id="flags">Flags: </div>
-                        <div id="windowSize">Window Size: </div>
-                        <div id="checksum">Checksum: </div>
-                        <div id="urgentPointer">Urgent Pointer: </div>
-                    </div>
+                <div id="tcp_results" class="analysis-section">
+                    <h3>TCP Results</h3>
+                    <table id="tcp_header" class="tcp-header-table"></table>
                 </div>
             </div>
         </div>
