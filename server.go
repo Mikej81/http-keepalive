@@ -238,8 +238,8 @@ func resolveCnameAndARecords(domain string) ([]string, []string, error) {
 	return []string{cnameRecords}, aRecords, nil
 }
 
-func analyzeTCPHandshake(target string) (*TCPResults, error) {
-	results := &TCPResults{}
+func analyzeTCPHandshake(target string) (TCPResults, error) {
+	results := TCPResults{}
 	addr, err := net.ResolveTCPAddr("tcp", target)
 	if err != nil {
 		return results, fmt.Errorf("error resolving address: %v\n", err)
@@ -282,22 +282,13 @@ func analyzeTCPHandshake(target string) (*TCPResults, error) {
 		httpRequest := "GET / HTTP/1.1\r\nHost: " + addr.IP.String() + "\r\nConnection: close\r\n\r\n"
 		n, err := tlsConn.Write([]byte(httpRequest))
 		if err != nil {
-			return nil, fmt.Errorf("error writing to TLS connection: %v\n", err)
+			return results, fmt.Errorf("error writing to TLS connection: %v\n", err)
 		}
 		fmt.Printf("TLS-CON: Sent %d bytes: %s\n", n, httpRequest)
 
 		results.TLSVersion = tlsConn.ConnectionState().Version
 		results.CipherSuite = tlsConn.ConnectionState().CipherSuite
 	}
-
-	// // You gotta say hello!
-	// httpRequest := "GET / HTTP/1.1\r\nHost: " + target + "\r\nConnection: close\r\n\r\n"
-	// n, err := conn.Write([]byte(httpRequest))
-	// if err != nil {
-	// 	log.Println(n, err)
-	// }
-
-	// fmt.Printf("CON: Sent %d bytes: %s\n", n, httpRequest)
 
 	// Set a longer timeout to read the SYN-ACK
 	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
@@ -425,6 +416,12 @@ func parseTCPOptions(options []byte) {
 			i += int(options[i+1])
 		}
 	}
+}
+
+func (r *TCPResponse) String() string {
+	return fmt.Sprintf("SourcePort: %d, DestinationPort: %d, SequenceNumber: %d, AckNumber: %d, DataOffset: %d, Flags: %08b, WindowSize: %d, Checksum: %d, UrgentPointer: %d, SYN: %t, ACK: %t, FIN: %t, RST: %t, PSH: %t, URG: %t, ECE: %t, CWR: %t, TCPOptions: %x",
+		r.SourcePort, r.DestinationPort, r.SequenceNumber, r.AckNumber, r.DataOffset, r.Flags, r.WindowSize, r.Checksum, r.UrgentPointer,
+		r.SYNFlag, r.ACKFlag, r.FINFlag, r.RSTFlag, r.PSHFlag, r.URGFlag, r.ECEFlag, r.CWRFlag, r.TCPOptions)
 }
 
 func isNotFoundError(err error) bool {

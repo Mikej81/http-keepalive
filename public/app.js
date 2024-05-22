@@ -41,10 +41,34 @@ document.addEventListener('DOMContentLoaded', function () {
                     '</table>';
                 dnsDiv.style.display = 'block'; // Show the div
 
-                // Update TCP Results as JSON string for simplicity
-                tcpDiv.innerHTML = '<h3>TCP Results</h3><pre>' +
-                    data.tcpResults + '</pre>';
-                tcpDiv.style.display = 'block'; // Show the div
+                // Parse the tcpResults string to a JSON object
+                let tcpData;
+                try {
+                    tcpData = JSON.parse(data.tcpResults);
+                } catch (e) {
+                    console.error('Failed to parse tcpResults:', e);
+                    tcpDiv.innerHTML = 'Failed to parse TCP Results';
+                    tcpDiv.style.display = 'block';
+                    return;
+                }
+
+                // Update TCP Results
+                if (tcpData && tcpData.tcp_response) {
+                    const tcpContent = `
+                        <h3>TCP Results</h3>
+                        <table>
+                            <tr><th>Field</th><th>Value</th></tr>
+                            ${Object.entries(tcpData.tcp_response).map(([key, value]) => `
+                                <tr><td>${key}</td><td>${value}</td></tr>
+                            `).join('')}
+                        </table>
+                    `;
+                    tcpDiv.innerHTML = tcpContent;
+                    tcpDiv.style.display = 'block'; // Show the div
+                } else {
+                    tcpDiv.innerHTML = 'No TCP Results';
+                    tcpDiv.style.display = 'block';
+                }
 
                 // Convert keepAliveTimeout to a number if possible, else default to 0
                 let keepAliveTimeout = parseInt(data.keepAliveTimeout, 10);
