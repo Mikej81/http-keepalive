@@ -14,6 +14,7 @@ type response struct {
 	XCacheHeader     string   `json:"xCacheHeader"`     // X-Cache header info
 	CloudflareHeader string   `json:"cloudflareHeader"` // Cloudflare specific headers
 	CloudFrontHeader string   `json:"cloudfrontHeader"` // Indicator for AWS CloudFront
+	AkamaiHeader     string   `json:"akamaiHeader"`
 	CnameRecords     []string `json:"cnameRecords,omitempty"`
 	ARecords         []string `json:"aRecords,omitempty"`
 	TCPResults       string   `json:"tcpResults"` // Keep as a string

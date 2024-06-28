@@ -127,10 +127,14 @@ func attemptHTTPConnection(domain, dnsDomain string) (response, error) {
 	xcacheHeader := "No"           // Cache status from Varnish, Squid, or AWS CloudFront
 	cloudflareHeader := "No"       // Cloudflare specific headers
 	cloudfrontHeader := "No"       // AWS Cloudfront
+	akamaiHeader := "No"
 
 	// Check each header and update its corresponding variable
-	if ka, ok := headers["Keep-Alive"]; ok {
-		timeoutValue = extractTimeoutValue(ka[0])
+	// if ka, ok := headers["Keep-Alive"]; ok {
+	// 	timeoutValue = extractTimeoutValue(ka[0])
+	// }
+	if conn, ok := headers["Keep-Alive"]; ok {
+		timeoutValue = extractTimeoutValue(conn[0])
 	}
 	if conn, ok := headers["Connection"]; ok {
 		connectionHeader = conn[0]
@@ -154,6 +158,12 @@ func attemptHTTPConnection(domain, dnsDomain string) (response, error) {
 		cloudflareHeader = conn[0]
 	} else if conn, ok := headers["CF-Cache-Status"]; ok {
 		cloudflareHeader = conn[0] // Fallback to CF-Cache-Status if CF-Ray is not present
+	}
+
+	// New: Check if Akamai CDN is used
+	akamaiDetected := checkAkamai(headers)
+	if akamaiDetected {
+		akamaiHeader = "Detected"
 	}
 
 	// Check the Set-Cookie header for CloudFront indication
@@ -186,10 +196,22 @@ func attemptHTTPConnection(domain, dnsDomain string) (response, error) {
 		XCacheHeader:     xcacheHeader,
 		CloudflareHeader: cloudflareHeader,
 		CloudFrontHeader: cloudfrontHeader,
+		AkamaiHeader:     akamaiHeader,
 		CnameRecords:     cnameRecords,
 		ARecords:         aRecords,
 		TCPResults:       string(tcpResults), // Convert to string if necessary
 	}, nil
+}
+
+func checkAkamai(headers http.Header) bool {
+	// Check for Akamai-specific headers
+	_, xAkamaiTransformed := headers["X-Akamai-Transformed"]
+	_, xAkamaiSessionInfo := headers["X-Akamai-Session-Info"]
+	_, akamaiOriginHop := headers["Akamai-Origin-Hop"]
+	_, trueClientIP := headers["True-Client-IP"]
+	_, xAkamaiStaging := headers["X-Akamai-Staging"]
+
+	return xAkamaiTransformed || xAkamaiSessionInfo || akamaiOriginHop || trueClientIP || xAkamaiStaging
 }
 
 func httpsGetWithTLSInfo(url string, ip string) (string, string, http.Header, []byte, error) {

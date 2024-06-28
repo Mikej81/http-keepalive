@@ -118,7 +118,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     <p><span style="color: lightgrey;">[Cache Detected]</span> ${data.xCacheHeader}</p>
                     <p><span style="color: lightgrey;">[Cloudflare Detected]</span> ${data.cloudflareHeader}</p>
                     <p><span style="color: lightgrey;">[Cloudfront Detected]</span> ${data.cloudfrontHeader}</p>
-    
+                     <p><span style="color: lightgrey;">[Akamai Detected]</span> ${data.akamaiHeader}</p>   
                     <p>Request Duration: ${data.requestDuration} milliseconds</p>
                 `;
                 resultsDiv.innerHTML = content;
