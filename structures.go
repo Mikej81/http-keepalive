@@ -8,9 +8,15 @@ type response struct {
 	TLSVersion       string   `json:"tlsVersion"`
 	ConnectionHeader string   `json:"connectionHeader"`
 	ServerHeader     string   `json:"serverHeader"`
+	PoweredHeader    string   `json:"poweredHeader"`    // X-Powered-By
+	ForwardHeader    string   `json:"forwardHeader"`    // X-Forwarded-For
+	RealIPHeader     string   `json:"realipHeader"`     // X-Real-IP
+	XCacheHeader     string   `json:"xCacheHeader"`     // X-Cache header info
+	CloudflareHeader string   `json:"cloudflareHeader"` // Cloudflare specific headers
+	CloudFrontHeader string   `json:"cloudfrontHeader"` // Indicator for AWS CloudFront
 	CnameRecords     []string `json:"cnameRecords,omitempty"`
 	ARecords         []string `json:"aRecords,omitempty"`
-	TCPResults       string   `json:"tcpResults,omitempty"` // Changed to string
+	TCPResults       string   `json:"tcpResults"` // Keep as a string
 }
 
 // TCPResults is the structure to hold TCP handshake and analysis results.

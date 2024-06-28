@@ -117,10 +117,18 @@ func attemptHTTPConnection(domain, dnsDomain string) (response, error) {
 		return response{}, fmt.Errorf("failed to fetch data: %v", err)
 	}
 
+	// Initialize all header variables with "Not Defined"
 	timeoutValue := "Not Defined"
 	connectionHeader := "Not Defined"
 	serverHeader := "Not Defined"
+	poweredHeader := "Not Defined" // Powered By
+	forwardHeader := "Not Defined" // X-Forwarded-For (XFF)
+	realipHeader := "Not Defined"  // X-Real-IP
+	xcacheHeader := "No"           // Cache status from Varnish, Squid, or AWS CloudFront
+	cloudflareHeader := "No"       // Cloudflare specific headers
+	cloudfrontHeader := "No"       // AWS Cloudfront
 
+	// Check each header and update its corresponding variable
 	if ka, ok := headers["Keep-Alive"]; ok {
 		timeoutValue = extractTimeoutValue(ka[0])
 	}
@@ -129,6 +137,38 @@ func attemptHTTPConnection(domain, dnsDomain string) (response, error) {
 	}
 	if conn, ok := headers["Server"]; ok {
 		serverHeader = conn[0]
+	}
+	if conn, ok := headers["X-Powered-By"]; ok {
+		poweredHeader = conn[0]
+	}
+	if conn, ok := headers["X-Forwarded-For"]; ok {
+		forwardHeader = conn[0]
+	}
+	if conn, ok := headers["X-Real-IP"]; ok {
+		realipHeader = conn[0]
+	}
+	if conn, ok := headers["X-Cache"]; ok {
+		xcacheHeader = conn[0]
+	}
+	if conn, ok := headers["CF-Ray"]; ok {
+		cloudflareHeader = conn[0]
+	} else if conn, ok := headers["CF-Cache-Status"]; ok {
+		cloudflareHeader = conn[0] // Fallback to CF-Cache-Status if CF-Ray is not present
+	}
+
+	// Check the Set-Cookie header for CloudFront indication
+	if cookies, ok := headers["Set-Cookie"]; ok {
+		for _, cookie := range cookies {
+			if strings.Contains(cookie, "AWSALB") {
+				cloudfrontHeader = "Detected"
+				break // No need to check further if we've found the indicator
+			}
+		}
+	}
+
+	// Final adjustments based on conditions
+	if forwardHeader == "Not Defined" && realipHeader != "Not Defined" {
+		forwardHeader = realipHeader // Use X-Real-IP if X-Forwarded-For is not defined
 	}
 
 	duration := time.Since(startTime).Milliseconds()
@@ -140,9 +180,15 @@ func attemptHTTPConnection(domain, dnsDomain string) (response, error) {
 		TLSVersion:       tlsVersion,
 		ConnectionHeader: connectionHeader,
 		ServerHeader:     serverHeader,
+		PoweredHeader:    poweredHeader,
+		ForwardHeader:    forwardHeader,
+		RealIPHeader:     realipHeader,
+		XCacheHeader:     xcacheHeader,
+		CloudflareHeader: cloudflareHeader,
+		CloudFrontHeader: cloudfrontHeader,
 		CnameRecords:     cnameRecords,
 		ARecords:         aRecords,
-		TCPResults:       string(tcpResults), // Convert to string
+		TCPResults:       string(tcpResults), // Convert to string if necessary
 	}, nil
 }
 

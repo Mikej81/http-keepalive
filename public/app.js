@@ -113,6 +113,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     <p><span style="color: lightgrey;">[Header]</span> Keep-Alive: Timeout=${data.keepAliveTimeout}</p>
                     <p><span style="color: lightgrey;">[Header]</span> Connection: ${data.connectionHeader}</p>
                     <p><span style="color: lightgrey;">[Header]</span> Server: ${data.serverHeader}</p>
+                    <p><span style="color: lightgrey;">[Header]</span> X-Powered-By: ${data.poweredHeader}</p>
+                    <p><span style="color: lightgrey;">[Header]</span> X-Forwarded-For/X-Real-IP: ${data.forwardHeader}</p>
+                    <p><span style="color: lightgrey;">[Cache Detected]</span> ${data.xCacheHeader}</p>
+                    <p><span style="color: lightgrey;">[Cloudflare Detected]</span> ${data.cloudflareHeader}</p>
+                    <p><span style="color: lightgrey;">[Cloudfront Detected]</span> ${data.cloudfrontHeader}</p>
+    
                     <p>Request Duration: ${data.requestDuration} milliseconds</p>
                 `;
                 resultsDiv.innerHTML = content;
