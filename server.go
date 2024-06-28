@@ -119,12 +119,16 @@ func attemptHTTPConnection(domain, dnsDomain string) (response, error) {
 
 	timeoutValue := "Not Defined"
 	connectionHeader := "Not Defined"
+	serverHeader := "Not Defined"
 
 	if ka, ok := headers["Keep-Alive"]; ok {
 		timeoutValue = extractTimeoutValue(ka[0])
 	}
 	if conn, ok := headers["Connection"]; ok {
 		connectionHeader = conn[0]
+	}
+	if conn, ok := headers["Server"]; ok {
+		serverHeader = conn[0]
 	}
 
 	duration := time.Since(startTime).Milliseconds()
@@ -135,6 +139,7 @@ func attemptHTTPConnection(domain, dnsDomain string) (response, error) {
 		RequestDuration:  duration,
 		TLSVersion:       tlsVersion,
 		ConnectionHeader: connectionHeader,
+		ServerHeader:     serverHeader,
 		CnameRecords:     cnameRecords,
 		ARecords:         aRecords,
 		TCPResults:       string(tcpResults), // Convert to string
@@ -149,7 +154,12 @@ func httpsGetWithTLSInfo(url string, ip string) (string, string, http.Header, []
 			},
 		},
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return nil
+			if len(via) >= 10 {
+				return http.ErrUseLastResponse // stop after 10 redirects
+			}
+			// Print or log the redirect
+			fmt.Printf("Redirecting to: %s\n", req.URL)
+			return nil // continue following redirects
 		},
 	}
 

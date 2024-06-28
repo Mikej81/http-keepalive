@@ -112,6 +112,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     <p>Server-Side TLS Version: <b>${data.tlsVersion}</b></p>
                     <p><span style="color: lightgrey;">[Header]</span> Keep-Alive: Timeout=${data.keepAliveTimeout}</p>
                     <p><span style="color: lightgrey;">[Header]</span> Connection: ${data.connectionHeader}</p>
+                    <p><span style="color: lightgrey;">[Header]</span> Server: ${data.serverHeader}</p>
                     <p>Request Duration: ${data.requestDuration} milliseconds</p>
                 `;
                 resultsDiv.innerHTML = content;

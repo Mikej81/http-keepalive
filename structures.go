@@ -7,6 +7,7 @@ type response struct {
 	RequestDuration  int64    `json:"requestDuration"`
 	TLSVersion       string   `json:"tlsVersion"`
 	ConnectionHeader string   `json:"connectionHeader"`
+	ServerHeader     string   `json:"serverHeader"`
 	CnameRecords     []string `json:"cnameRecords,omitempty"`
 	ARecords         []string `json:"aRecords,omitempty"`
 	TCPResults       string   `json:"tcpResults,omitempty"` // Changed to string
