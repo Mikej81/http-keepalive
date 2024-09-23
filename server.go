@@ -54,7 +54,8 @@ func analyzeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var reqData struct {
-		Domain string `json:"domain"`
+		Domain       string `json:"domain"`
+		UseCachedDns bool   `json:"useCachedDns"` // Flag to determine whether to use cached DNS or not
 	}
 
 	err := json.NewDecoder(r.Body).Decode(&reqData)
@@ -81,7 +82,10 @@ func analyzeHandler(w http.ResponseWriter, r *http.Request) {
 		port = "80"
 	}
 
-	response, err := attemptHTTPConnection(domain, dnsDomain)
+	// Use the `useCachedDns` flag to control how the DNS is resolved
+	log.Printf("DNS resolution for domain: %s, using cached DNS: %v", dnsDomain, reqData.UseCachedDns)
+
+	response, err := attemptHTTPConnection(domain, dnsDomain, reqData.UseCachedDns)
 	if err != nil && port == "80" {
 		domain = "https://" + dnsDomain
 		parsedURL, err = url.Parse(domain)
@@ -90,7 +94,7 @@ func analyzeHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		port = "443"
-		response, err = attemptHTTPConnection(domain, dnsDomain)
+		response, err = attemptHTTPConnection(domain, dnsDomain, reqData.UseCachedDns)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Failed to fetch data: %v", err), http.StatusInternalServerError)
 			return
@@ -103,9 +107,9 @@ func analyzeHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(responseObj)
 }
 
-func attemptHTTPConnection(domain, dnsDomain string) (response, error) {
+func attemptHTTPConnection(domain, dnsDomain string, useCachedDns bool) (response, error) {
 	// Resolve the domain to get A records
-	cnameRecords, aRecords, err := resolveCnameAndARecords(dnsDomain)
+	cnameRecords, aRecords, err := resolveCnameAndARecords(dnsDomain, useCachedDns)
 	if err != nil {
 		return response{}, fmt.Errorf("failed to resolve DNS records: %v", err)
 	}
@@ -331,13 +335,24 @@ func getSystemDNSServer() (string, error) {
 	return "", fmt.Errorf("no nameserver found in resolv.conf")
 }
 
-func resolveCnameAndARecords(domain string) ([]string, []DNSRecordWithTTL, error) {
+func resolveCnameAndARecords(domain string, useCachedDns bool) ([]string, []DNSRecordWithTTL, error) {
 	log.Println("DNS Analyze handler hit") // Add this to check if the request reaches here
 
-	// Get the system DNS server from /etc/resolv.conf
-	dnsServer, err := getSystemDNSServer()
-	if err != nil {
-		return nil, nil, fmt.Errorf("failed to get system DNS server: %v", err)
+	var dnsServer string
+	var err error
+
+	// If useCachedDns is true, get the system's DNS server, otherwise use 8.8.8.8
+	if useCachedDns {
+		// Use the system DNS server
+		dnsServer, err = getSystemDNSServer()
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to get system DNS server: %v", err)
+		}
+		log.Println("Using system DNS server:", dnsServer)
+	} else {
+		// Use Google's DNS server (8.8.8.8)
+		dnsServer = "8.8.8.8:53"
+		log.Println("Using Google's DNS server: 8.8.8.8")
 	}
 
 	cnameRecords, err := net.LookupCNAME(domain)
