@@ -2,22 +2,22 @@ package main
 
 // Response structure
 type response struct {
-	Domain           string   `json:"domain"`
-	KeepAliveTimeout string   `json:"keepAliveTimeout"`
-	RequestDuration  int64    `json:"requestDuration"`
-	TLSVersion       string   `json:"tlsVersion"`
-	ConnectionHeader string   `json:"connectionHeader"`
-	ServerHeader     string   `json:"serverHeader"`
-	PoweredHeader    string   `json:"poweredHeader"`    // X-Powered-By
-	ForwardHeader    string   `json:"forwardHeader"`    // X-Forwarded-For
-	RealIPHeader     string   `json:"realipHeader"`     // X-Real-IP
-	XCacheHeader     string   `json:"xCacheHeader"`     // X-Cache header info
-	CloudflareHeader string   `json:"cloudflareHeader"` // Cloudflare specific headers
-	CloudFrontHeader string   `json:"cloudfrontHeader"` // Indicator for AWS CloudFront
-	AkamaiHeader     string   `json:"akamaiHeader"`
-	CnameRecords     []string `json:"cnameRecords,omitempty"`
-	ARecords         []string `json:"aRecords,omitempty"`
-	TCPResults       string   `json:"tcpResults"` // Keep as a string
+	Domain           string             `json:"domain"`
+	KeepAliveTimeout string             `json:"keepAliveTimeout"`
+	RequestDuration  int64              `json:"requestDuration"`
+	TLSVersion       string             `json:"tlsVersion"`
+	ConnectionHeader string             `json:"connectionHeader"`
+	ServerHeader     string             `json:"serverHeader"`
+	PoweredHeader    string             `json:"poweredHeader"`    // X-Powered-By
+	ForwardHeader    string             `json:"forwardHeader"`    // X-Forwarded-For
+	RealIPHeader     string             `json:"realipHeader"`     // X-Real-IP
+	XCacheHeader     string             `json:"xCacheHeader"`     // X-Cache header info
+	CloudflareHeader string             `json:"cloudflareHeader"` // Cloudflare specific headers
+	CloudFrontHeader string             `json:"cloudfrontHeader"` // Indicator for AWS CloudFront
+	AkamaiHeader     string             `json:"akamaiHeader"`
+	CnameRecords     []string           `json:"cnameRecords,omitempty"`
+	ARecordsWithTTL  []DNSRecordWithTTL `json:"aRecordsWithTTL,omitempty"` // Changed to DNSRecordWithTTL
+	TCPResults       string             `json:"tcpResults"`                // Keep as a string
 }
 
 // TCPResults is the structure to hold TCP handshake and analysis results.
@@ -48,4 +48,10 @@ type TCPResponse struct {
 	ECEFlag         bool   `json:"ece_flag"`
 	CWRFlag         bool   `json:"cwr_flag"`
 	TCPOptions      []byte `json:"tcp_options"`
+}
+
+// Struct to store DNS result with TTL
+type DNSRecordWithTTL struct {
+	IP  string `json:"ip"`
+	TTL uint32 `json:"ttl"`
 }

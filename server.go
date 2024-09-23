@@ -14,6 +14,8 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/miekg/dns"
 )
 
 const port = ":3000"
@@ -107,9 +109,6 @@ func attemptHTTPConnection(domain, dnsDomain string) (response, error) {
 		return response{}, fmt.Errorf("no A records found for the domain")
 	}
 
-	// Use the first A record (IP address) for TCP analysis
-	//ip := aRecords[0]
-
 	startTime := time.Now()
 
 	finalDomain, tlsVersion, headers, tcpResults, err := httpsGetWithTLSInfo(domain, dnsDomain)
@@ -198,7 +197,7 @@ func attemptHTTPConnection(domain, dnsDomain string) (response, error) {
 		CloudFrontHeader: cloudfrontHeader,
 		AkamaiHeader:     akamaiHeader,
 		CnameRecords:     cnameRecords,
-		ARecords:         aRecords,
+		ARecordsWithTTL:  aRecords,
 		TCPResults:       string(tcpResults), // Convert to string if necessary
 	}, nil
 }
@@ -302,18 +301,33 @@ func extractTimeoutValue(keepAliveHeader string) string {
 	return "Not Defined"
 }
 
-func resolveCnameAndARecords(domain string) ([]string, []string, error) {
+func resolveCnameAndARecords(domain string) ([]string, []DNSRecordWithTTL, error) {
 	cnameRecords, err := net.LookupCNAME(domain)
 	if err != nil && !isNotFoundError(err) {
 		return nil, nil, err
 	}
 
-	aRecords, err := net.LookupHost(domain)
-	if err != nil && !isNotFoundError(err) {
-		return nil, nil, err
+	// Custom DNS query to fetch A records with TTL using the miekg/dns package
+	m := new(dns.Msg)
+	m.SetQuestion(dns.Fqdn(domain), dns.TypeA)
+
+	client := new(dns.Client)
+	in, _, err := client.Exchange(m, "8.8.8.8:53") // Use Google's public DNS or any preferred DNS server
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to query DNS: %v", err)
 	}
 
-	return []string{cnameRecords}, aRecords, nil
+	var aRecordsWithTTL []DNSRecordWithTTL
+	for _, ans := range in.Answer {
+		if a, ok := ans.(*dns.A); ok {
+			aRecordsWithTTL = append(aRecordsWithTTL, DNSRecordWithTTL{
+				IP:  a.A.String(),
+				TTL: a.Header().Ttl,
+			})
+		}
+	}
+
+	return []string{cnameRecords}, aRecordsWithTTL, nil
 }
 
 func analyzeTCPHandshake(target string) (TCPResults, error) {

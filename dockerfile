@@ -17,7 +17,8 @@ RUN go mod download
 COPY *.go .
 # COPY *.sum .
 
-RUN go build -o http-keepalive -v .
+RUN go get github.com/miekg/dns && \
+    go build -o http-keepalive -v .
 
 FROM alpine:latest  
 

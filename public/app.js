@@ -34,11 +34,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 return response.json();
             })
             .then(data => {
-                // Update DNS Results
+                // Update DNS Results with TTL for A records
                 dnsDiv.innerHTML = '<h3>DNS Results</h3>' +
-                    '<table><tr><th>Type</th><th>Value</th></tr>' +
-                    data.cnameRecords.map(record => `<tr><td>CNAME</td><td>${record}</td></tr>`).join('') +
-                    data.aRecords.map(record => `<tr><td>A</td><td>${record}</td></tr>`).join('') +
+                    '<table><tr><th>Type</th><th>Value</th><th>TTL</th></tr>' +
+                    data.cnameRecords.map(record => `<tr><td>CNAME</td><td>${record}</td><td>N/A</td></tr>`).join('') + // CNAME doesn't have TTL in this example
+                    data.aRecordsWithTTL.map(record => `<tr><td>A</td><td>${record.ip}</td><td>${record.ttl}</td></tr>`).join('') +
                     '</table>';
                 dnsDiv.style.display = 'block'; // Show the div
 
