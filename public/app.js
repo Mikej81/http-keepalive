@@ -32,11 +32,15 @@ document.addEventListener('DOMContentLoaded', function () {
                 return response.json();
             })
             .then(data => {
+                // Safely handle cnameRecords and aRecordsWithTTL
+                const cnameRecords = Array.isArray(data.cnameRecords) ? data.cnameRecords : [];
+                const aRecordsWithTTL = Array.isArray(data.aRecordsWithTTL) ? data.aRecordsWithTTL : [];
+
                 // Update DNS Results with TTL for A records
                 dnsDiv.innerHTML = '<h3>DNS Results</h3>' +
                     '<table><tr><th>Type</th><th>Value</th><th>TTL</th></tr>' +
-                    data.cnameRecords.map(record => `<tr><td>CNAME</td><td>${record}</td><td>N/A</td></tr>`).join('') + // CNAME doesn't have TTL in this example
-                    data.aRecordsWithTTL.map(record => `<tr><td>A</td><td>${record.ip}</td><td>${record.ttl}</td></tr>`).join('') +
+                    cnameRecords.map(record => `<tr><td>CNAME</td><td>${record}</td><td>N/A</td></tr>`).join('') + // CNAME doesn't have TTL in this example
+                    aRecordsWithTTL.map(record => `<tr><td>A</td><td>${record.ip}</td><td>${record.ttl}</td></tr>`).join('') +
                     '</table>';
                 dnsDiv.style.display = 'block'; // Show the div
 
@@ -135,7 +139,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     function updateChart(domain, keepAliveTimeout, requestDuration) {
-        const ctx = document.getElementById('analysisChart').getContext('2d');
+        const ctx = document.getElementById('analysisChart').getContext('2d', { willReadFrequently: true });
         if (window.myChart) {
             window.myChart.destroy(); // Destroy the existing chart instance if exists
         }
