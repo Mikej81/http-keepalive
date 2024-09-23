@@ -16,8 +16,6 @@ document.addEventListener('DOMContentLoaded', function () {
         resultsDiv.style.display = 'none';
         dnsDiv.innerHTML = 'Loading DNS Results...';
         dnsDiv.style.display = 'none';
-        //tcpDiv.innerHTML = 'Loading TCP Results...';
-        //tcpDiv.style.display = 'none';
 
         // Make the HTTP request using Fetch API to the server-side `/analyze` endpoint
         fetch('/analyze', {

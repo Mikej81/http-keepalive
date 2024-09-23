@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"crypto/tls"
 	"encoding/binary"
 	"encoding/json"
@@ -11,6 +12,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -43,6 +45,9 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func analyzeHandler(w http.ResponseWriter, r *http.Request) {
+
+	log.Println("Analyze handler hit") // Add this to check if the request reaches here
+
 	if r.Method != http.MethodPost {
 		http.Error(w, "Invalid request method", http.StatusMethodNotAllowed)
 		return
@@ -301,7 +306,40 @@ func extractTimeoutValue(keepAliveHeader string) string {
 	return "Not Defined"
 }
 
+func getSystemDNSServer() (string, error) {
+	file, err := os.Open("/etc/resolv.conf")
+	if err != nil {
+		return "", fmt.Errorf("failed to open resolv.conf: %v", err)
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, "nameserver") {
+			parts := strings.Fields(line)
+			if len(parts) > 1 {
+				return parts[1] + ":53", nil // Return DNS server with port 53
+			}
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return "", fmt.Errorf("failed to read resolv.conf: %v", err)
+	}
+
+	return "", fmt.Errorf("no nameserver found in resolv.conf")
+}
+
 func resolveCnameAndARecords(domain string) ([]string, []DNSRecordWithTTL, error) {
+	log.Println("DNS Analyze handler hit") // Add this to check if the request reaches here
+
+	// Get the system DNS server from /etc/resolv.conf
+	dnsServer, err := getSystemDNSServer()
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get system DNS server: %v", err)
+	}
+
 	cnameRecords, err := net.LookupCNAME(domain)
 	if err != nil && !isNotFoundError(err) {
 		return nil, nil, err
@@ -311,9 +349,11 @@ func resolveCnameAndARecords(domain string) ([]string, []DNSRecordWithTTL, error
 	m := new(dns.Msg)
 	m.SetQuestion(dns.Fqdn(domain), dns.TypeA)
 
-	client := new(dns.Client)
-	in, _, err := client.Exchange(m, "8.8.8.8:53") // Use Google's public DNS or any preferred DNS server
+	// Use the system's default resolver, no need to specify a DNS server
+	c := new(dns.Client)
+	in, _, err := c.Exchange(m, dnsServer) // Use the retrieved DNS server
 	if err != nil {
+		log.Println("DNS Analyze handler hit error")
 		return nil, nil, fmt.Errorf("failed to query DNS: %v", err)
 	}
 
