@@ -120,7 +120,7 @@ func attemptHTTPConnection(domain, dnsDomain string, useCachedDns bool) (respons
 
 	startTime := time.Now()
 
-	finalDomain, tlsVersion, headers, tcpResults, err := httpsGetWithTLSInfo(domain, dnsDomain)
+	finalDomain, tlsVersion, requestHeaders, responseHeaders, tcpResults, err := httpsGetWithTLSInfo(domain, dnsDomain)
 	if err != nil {
 		return response{}, fmt.Errorf("failed to fetch data: %v", err)
 	}
@@ -141,41 +141,41 @@ func attemptHTTPConnection(domain, dnsDomain string, useCachedDns bool) (respons
 	// if ka, ok := headers["Keep-Alive"]; ok {
 	// 	timeoutValue = extractTimeoutValue(ka[0])
 	// }
-	if conn, ok := headers["Keep-Alive"]; ok {
+	if conn, ok := responseHeaders["Keep-Alive"]; ok {
 		timeoutValue = extractTimeoutValue(conn[0])
 	}
-	if conn, ok := headers["Connection"]; ok {
+	if conn, ok := responseHeaders["Connection"]; ok {
 		connectionHeader = conn[0]
 	}
-	if conn, ok := headers["Server"]; ok {
+	if conn, ok := responseHeaders["Server"]; ok {
 		serverHeader = conn[0]
 	}
-	if conn, ok := headers["X-Powered-By"]; ok {
+	if conn, ok := responseHeaders["X-Powered-By"]; ok {
 		poweredHeader = conn[0]
 	}
-	if conn, ok := headers["X-Forwarded-For"]; ok {
+	if conn, ok := responseHeaders["X-Forwarded-For"]; ok {
 		forwardHeader = conn[0]
 	}
-	if conn, ok := headers["X-Real-IP"]; ok {
+	if conn, ok := responseHeaders["X-Real-IP"]; ok {
 		realipHeader = conn[0]
 	}
-	if conn, ok := headers["X-Cache"]; ok {
+	if conn, ok := responseHeaders["X-Cache"]; ok {
 		xcacheHeader = conn[0]
 	}
-	if conn, ok := headers["CF-Ray"]; ok {
+	if conn, ok := responseHeaders["CF-Ray"]; ok {
 		cloudflareHeader = conn[0]
-	} else if conn, ok := headers["CF-Cache-Status"]; ok {
+	} else if conn, ok := responseHeaders["CF-Cache-Status"]; ok {
 		cloudflareHeader = conn[0] // Fallback to CF-Cache-Status if CF-Ray is not present
 	}
 
 	// New: Check if Akamai CDN is used
-	akamaiDetected := checkAkamai(headers)
+	akamaiDetected := checkAkamai(responseHeaders)
 	if akamaiDetected {
 		akamaiHeader = "Detected"
 	}
 
 	// Check the Set-Cookie header for CloudFront indication
-	if cookies, ok := headers["Set-Cookie"]; ok {
+	if cookies, ok := responseHeaders["Set-Cookie"]; ok {
 		for _, cookie := range cookies {
 			if strings.Contains(cookie, "AWSALB") {
 				cloudfrontHeader = "Detected"
@@ -190,6 +190,14 @@ func attemptHTTPConnection(domain, dnsDomain string, useCachedDns bool) (respons
 	}
 
 	duration := time.Since(startTime).Milliseconds()
+
+	// Generate CSP details
+	cspDetails, cspErr := generateCSP(domain)
+	if cspErr != nil {
+		// Handle the error as needed
+		fmt.Printf("Error generating CSP: %v\n", cspErr)
+		cspDetails = "Error generating CSP"
+	}
 
 	return response{
 		Domain:           finalDomain,
@@ -208,6 +216,9 @@ func attemptHTTPConnection(domain, dnsDomain string, useCachedDns bool) (respons
 		CnameRecords:     cnameRecords,
 		ARecordsWithTTL:  aRecords,
 		TCPResults:       string(tcpResults), // Convert to string if necessary
+		CSPDetails:       cspDetails,
+		RequestHeaders:   requestHeaders,
+		ResponseHeaders:  responseHeaders,
 	}, nil
 }
 
@@ -222,7 +233,7 @@ func checkAkamai(headers http.Header) bool {
 	return xAkamaiTransformed || xAkamaiSessionInfo || akamaiOriginHop || trueClientIP || xAkamaiStaging
 }
 
-func httpsGetWithTLSInfo(url string, ip string) (string, string, http.Header, []byte, error) {
+func httpsGetWithTLSInfo(url string, ip string) (string, string, http.Header, http.Header, []byte, error) {
 	client := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
@@ -239,11 +250,20 @@ func httpsGetWithTLSInfo(url string, ip string) (string, string, http.Header, []
 		},
 	}
 
+	// Create a new request so we can inspect or modify it
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return "", "", nil, nil, nil, err
+	}
+
 	resp, err := client.Get(url)
 	if err != nil {
-		return "", "", nil, nil, err
+		return "", "", nil, nil, nil, err
 	}
 	defer resp.Body.Close()
+
+	// Capture the request headers (after any modifications by the transport)
+	requestHeaders := req.Header
 
 	finalURL := resp.Request.URL.String()
 
@@ -265,6 +285,9 @@ func httpsGetWithTLSInfo(url string, ip string) (string, string, http.Header, []
 	tcpResults, tcpErr := analyzeTCPHandshake(ip + ":" + port)
 	if tcpErr != nil {
 		fmt.Printf("TCP Error: %v\n", tcpErr)
+		// Decide whether to proceed without TCP data or return an error
+		// For now, include the error message in the results
+		tcpResults.Error = tcpErr.Error()
 	}
 
 	jsonResults, err := json.MarshalIndent(tcpResults, "", " ")
@@ -274,7 +297,7 @@ func httpsGetWithTLSInfo(url string, ip string) (string, string, http.Header, []
 
 	_, err = io.ReadAll(resp.Body)
 	if err != nil {
-		return "", "", nil, nil, err
+		return "", "", nil, nil, nil, err
 	}
 
 	tlsVersion := "Unknown"
@@ -282,7 +305,7 @@ func httpsGetWithTLSInfo(url string, ip string) (string, string, http.Header, []
 		tlsVersion = tlsVersionToString(resp.TLS.Version)
 	}
 
-	return finalURL, tlsVersion, resp.Header, jsonResults, nil
+	return finalURL, tlsVersion, requestHeaders, resp.Header, jsonResults, nil
 }
 
 func tlsVersionToString(version uint16) string {
@@ -389,79 +412,66 @@ func analyzeTCPHandshake(target string) (TCPResults, error) {
 	results := TCPResults{}
 	addr, err := net.ResolveTCPAddr("tcp", target)
 	if err != nil {
-		return results, fmt.Errorf("error resolving address: %v\n", err)
+		return results, fmt.Errorf("error resolving address: %v", err)
 	}
 
 	var conn net.Conn
 
 	// Try to connect via TCP first
 	conn, err = net.DialTCP("tcp", nil, addr)
-	if err == nil {
-		defer conn.Close()
-
-		// You gotta say hello!
-		httpRequest := "GET / HTTP/1.1\r\nHost: " + target + "\r\nConnection: close\r\n\r\n"
-		n, err := conn.Write([]byte(httpRequest))
-		if err != nil {
-			log.Println(n, err)
-		}
-
-		fmt.Printf("CON: Sent %d bytes: %s\n", n, httpRequest)
-	} else {
+	if err != nil {
 		// If TCP connection fails, try TLS
 		conn, err = tls.Dial("tcp", target, &tls.Config{
 			InsecureSkipVerify: true,
 		})
 		if err != nil {
-			return results, fmt.Errorf("error connecting to target: %v\n", err)
+			return results, fmt.Errorf("error connecting to target: %v", err)
 		}
-		defer conn.Close()
+	}
+	defer conn.Close()
+
+	// Send an HTTP GET request
+	httpRequest := "GET / HTTP/1.1\r\nHost: " + addr.IP.String() + "\r\nConnection: close\r\n\r\n"
+	_, err = conn.Write([]byte(httpRequest))
+	if err != nil {
+		return results, fmt.Errorf("error writing to connection: %v", err)
 	}
 
-	if tlsConn, ok := conn.(*tls.Conn); ok {
-		// TLS connection
-		err = tlsConn.Handshake()
-		if err != nil {
-			return results, fmt.Errorf("TLS handshake error: %v\n", err)
-		}
+	// Set a longer timeout and increase retries
+	conn.SetReadDeadline(time.Now().Add(15 * time.Second)) // Increased timeout
 
-		// Send an HTTP GET request over the TLS connection
-		httpRequest := "GET / HTTP/1.1\r\nHost: " + addr.IP.String() + "\r\nConnection: close\r\n\r\n"
-		n, err := tlsConn.Write([]byte(httpRequest))
-		if err != nil {
-			return results, fmt.Errorf("error writing to TLS connection: %v\n", err)
-		}
-		fmt.Printf("TLS-CON: Sent %d bytes: %s\n", n, httpRequest)
+	buf := make([]byte, 4096) // Increased buffer size
+	totalRead := 0
+	maxRetries := 10
+	retryInterval := 1 * time.Second
 
-		results.TLSVersion = tlsConn.ConnectionState().Version
-		results.CipherSuite = tlsConn.ConnectionState().CipherSuite
-	}
-
-	// Set a longer timeout to read the SYN-ACK
-	conn.SetReadDeadline(time.Now().Add(10 * time.Second))
-
-	// Create a buffer to store the SYN-ACK response
-	buf := make([]byte, 256)
-	maxRetries := 5
+	var readErr error
 	for retries := 0; retries < maxRetries; retries++ {
-		_, err = conn.Read(buf)
+		n, err := conn.Read(buf[totalRead:])
+		if n > 0 {
+			totalRead += n
+		}
 		if err == nil {
+			// Successfully read data
 			break
 		}
 		if netErr, ok := err.(net.Error); ok && netErr.Timeout() {
 			fmt.Println("Read timed out, retrying...")
-			time.Sleep(100 * time.Millisecond) // Wait 100ms before retrying
+			time.Sleep(retryInterval) // Wait before retrying
 			continue
 		}
-		return results, fmt.Errorf("error reading SYN-ACK: %v\n", err)
+		readErr = err
+		fmt.Printf("Error reading data: %v\n", err)
+		break
 	}
 
-	if err != nil {
-		return results, fmt.Errorf("failed to read SYN-ACK from %s after %d attempts: %v\n", addr, maxRetries, err)
+	if totalRead == 0 {
+		return results, fmt.Errorf("no data received from %s after %d attempts: %v", addr, maxRetries, readErr)
 	}
 
-	// Analyze the SYN-ACK response and populate the results
-	response, err := analyzeTCPResponse(buf)
+	// Analyze the response data
+	responseData := buf[:totalRead]
+	response, err := analyzeTCPResponse(responseData)
 	if err != nil {
 		results.Error = err.Error()
 	} else {

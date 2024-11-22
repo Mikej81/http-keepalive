@@ -124,6 +124,53 @@
         .tcp-header-table td {
             border: 1px solid #000000;
         }
+
+        #csp_results {
+            max-height: 300px;
+            /* Set a fixed height */
+            overflow-y: auto;
+            /* Enable vertical scrolling */
+            background-color: #f8f9fa;
+            margin-top: 20px;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        /* Optional: Style the <pre> tag inside csp_results for better formatting */
+        #csp_results pre {
+            white-space: pre-wrap;
+            /* Wrap long lines */
+            word-wrap: break-word;
+            /* Break long words */
+        }
+
+        /* Styles for headers sections */
+        #request_headers,
+        #response_headers {
+            max-height: 300px;
+            /* Adjust as needed */
+            overflow-y: auto;
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        #request_headers table,
+        #response_headers table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        #request_headers th,
+        #response_headers th,
+        #request_headers td,
+        #response_headers td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
     </style>
 </head>
 
@@ -152,6 +199,16 @@
                     <canvas id="analysisChart"></canvas>
                 </div>
                 <div id="dns_results" class="analysis-section">DNS Results</div>
+                <!-- CSP Results Section -->
+                <div id="csp_results" class="analysis-section">
+                    <h3>Recommended CSP Baseline</h3>
+                    <!-- The CSP details will be populated here -->
+                </div>
+                <!-- Header Results Section -->
+                <div id="response_headers" class="analysis-section">
+                    <h3>Response Headers</h3>
+                    <!-- The Header details will be populated here -->
+                </div>
             </div>
             <div class="results-container">
                 <div id="results" class="analysis-section">Analysis Results</div>
@@ -162,6 +219,7 @@
                 </div>
             </div>
         </div>
+
     </div>
     <script src="app.js"></script>
 </body>

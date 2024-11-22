@@ -4,6 +4,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const tcpDiv = document.getElementById('tcp_results');
     const resultsDiv = document.getElementById('results');
     const tcpHeaderTable = document.getElementById('tcp_header');
+    const cspDiv = document.getElementById('csp_results');
+    const requestHeadersDiv = document.getElementById('request_headers');
+    const responseHeadersDiv = document.getElementById('response_headers');
 
     form.addEventListener('submit', function (event) {
         event.preventDefault(); // Prevent the default form submission
@@ -16,6 +19,9 @@ document.addEventListener('DOMContentLoaded', function () {
         resultsDiv.style.display = 'none';
         dnsDiv.innerHTML = 'Loading DNS Results...';
         dnsDiv.style.display = 'none';
+        // Clear and hide request and response headers
+        responseHeadersDiv.innerHTML = '<h3>HTTP Response Headers</h3>';
+        responseHeadersDiv.style.display = 'none';
 
         // Make the HTTP request using Fetch API to the server-side `/analyze` endpoint
         fetch('/analyze', {
@@ -44,19 +50,31 @@ document.addEventListener('DOMContentLoaded', function () {
                     '</table>';
                 dnsDiv.style.display = 'block'; // Show the div
 
+                // Display Response Headers
+                if (data.responseHeaders) {
+                    const responseHeadersContent = formatHeaders(data.responseHeaders);
+                    responseHeadersDiv.innerHTML += responseHeadersContent;
+                    responseHeadersDiv.style.display = 'block';
+                } else {
+                    responseHeadersDiv.innerHTML += '<p>No Response Headers Available</p>';
+                    responseHeadersDiv.style.display = 'block';
+                }
+
                 // Parse the tcpResults string to a JSON object
                 let tcpData;
                 try {
                     tcpData = JSON.parse(data.tcpResults);
                 } catch (e) {
                     console.error('Failed to parse tcpResults:', e);
-                    tcpDiv.innerHTML = 'Failed to parse TCP Results';
+                    tcpDiv.innerHTML = '<h3>TCP Results</h3> <p>Failed to parse TCP Results</p>';
                     tcpDiv.style.display = 'block';
                     return;
                 }
 
-                // Update TCP Results
-                if (tcpData && tcpData.tcp_response) {
+                // Check for errors in TCP data and Update results
+                if (tcpData && tcpData.error) {
+                    tcpDiv.innerHTML = `<h3>TCP Results</h3> <p>Error fetching TCP Results: ${tcpData.error}</p>`;
+                } else if (tcpData && tcpData.tcp_response) {
                     const tcpResponse = tcpData.tcp_response;
                     const flagsContent = `
                         SYN: ${tcpResponse.syn_flag}<br>
@@ -98,8 +116,24 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                     tcpDiv.style.display = 'block'; // Show the div
                 } else {
-                    tcpDiv.innerHTML = 'No TCP Results';
-                    tcpDiv.style.display = 'block';
+                    tcpDiv.innerHTML = '<h3>TCP Results</h3> <p>No TCP Results</p>';
+                }
+
+                // Update CSP Results
+                if (data.cspDetails) {
+                    // Check if cspDetails is an object or a string
+                    let formattedCSP;
+                    if (typeof data.cspDetails === 'object') {
+                        formattedCSP = '<pre>' + JSON.stringify(data.cspDetails, null, 2) + '</pre>';
+                    } else {
+                        formattedCSP = '<pre>' + data.cspDetails + '</pre>';
+                    }
+
+                    cspDiv.innerHTML = '<h3>Recommended CSP Baseline</h3>' + formattedCSP;
+                    cspDiv.style.display = 'block'; // Show the div
+                } else {
+                    cspDiv.innerHTML = '<h3>Recommended CSP Baseline</h3><p>No CSP Details Available</p>';
+                    cspDiv.style.display = 'block';
                 }
 
                 // Convert keepAliveTimeout to a number if possible, else default to 0
@@ -179,5 +213,14 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             }
         });
+    }
+    function formatHeaders(headers) {
+        let content = '<table><tr><th>Header</th><th>Value</th></tr>';
+        for (const [key, values] of Object.entries(headers)) {
+            const value = Array.isArray(values) ? values.join(', ') : values;
+            content += `<tr><td>${key}</td><td>${value}</td></tr>`;
+        }
+        content += '</table>';
+        return content;
     }
 });

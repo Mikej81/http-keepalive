@@ -1,5 +1,7 @@
 package main
 
+import "net/http"
+
 // Response structure
 type response struct {
 	Domain           string             `json:"domain"`
@@ -18,6 +20,9 @@ type response struct {
 	CnameRecords     []string           `json:"cnameRecords,omitempty"`
 	ARecordsWithTTL  []DNSRecordWithTTL `json:"aRecordsWithTTL,omitempty"` // Changed to DNSRecordWithTTL
 	TCPResults       string             `json:"tcpResults"`                // Keep as a string
+	CSPDetails       string             `json:"cspDetails"`
+	RequestHeaders   http.Header        `json:"requestHeaders"`
+	ResponseHeaders  http.Header        `json:"responseHeaders"`
 }
 
 // TCPResults is the structure to hold TCP handshake and analysis results.
