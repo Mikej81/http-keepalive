@@ -4,224 +4,310 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Domain Keep-Alive Analyzer</title>
-    <!-- Include Chart.js from CDN for visualization -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Include Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
-    <style>
-        body {
-            background-color: #f0f2f5;
-            font-family: 'Arial', sans-serif;
-            margin: 0;
-            padding: 0;
-        }
+    <meta name="description"
+        content="Analyze HTTP Keep-Alive settings, DNS records, and TCP connections for any domain">
+    <meta name="keywords" content="HTTP, Keep-Alive, DNS, TCP, domain analysis, web performance">
+    <meta name="author" content="HTTP Keep-Alive Analyzer">
 
-        .container {
-            max-width: 1200px;
-            margin: 20px auto;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
+    <!-- Security headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff">
+    <meta http-equiv="X-XSS-Protection" content="1; mode=block">
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
 
-        .form-container {
-            width: 100%;
-            text-align: center;
-            margin-bottom: 20px;
-        }
+    <!-- CSP will be added by server -->
 
-        .form-control {
-            height: 48px;
-            font-size: 16px;
-            width: 60%;
-            margin: 10px 0;
-            padding: 10px;
-            box-sizing: border-box;
-        }
+    <title>HTTP Keep-Alive Analyzer</title>
 
-        .btn-primary {
-            background-color: #5fa0e6;
-            border: none;
-            color: white;
-            padding: 12px 24px;
-            font-size: 16px;
-            cursor: pointer;
-            border-radius: 8px;
-        }
+    <!-- Preload critical resources -->
+    <link rel="preload" href="./styles.css" as="style">
+    <link rel="preload" href="./app.js" as="script">
 
-        .btn-primary:hover {
-            background-color: #0056b3;
-        }
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="./styles.css">
 
-        .content-container {
-            display: flex;
-            justify-content: space-between;
-            width: 100%;
-            align-items: flex-start;
-        }
-
-        .left-container {
-            width: 60%;
-            margin-right: 20px;
-        }
-
-        .chart-container {
-            width: 90%;
-        }
-
-        #analysisChart {
-            width: 100%;
-            height: 350px;
-            /* Adjust height as needed */
-        }
-
-        .results-container {
-            display: flex;
-            flex-direction: column;
-            width: 40%;
-            /* Adjust based on the width of the chart */
-        }
-
-        .analysis-section {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            font-size: 14px;
-            /* Reduced font size */
-            display: none;
-            /* Initially hide the divs */
-            margin-bottom: 20px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-
-        th,
-        td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: center;
-            font-size: 12px;
-        }
-
-        th {
-            background-color: #e7e7e7;
-        }
-
-        .tcp-header-table {
-            border: 2px solid #333;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .tcp-header-table th,
-        .tcp-header-table td {
-            border: 1px solid #000000;
-        }
-
-        #csp_results {
-            max-height: 300px;
-            /* Set a fixed height */
-            overflow-y: auto;
-            /* Enable vertical scrolling */
-            background-color: #f8f9fa;
-            margin-top: 20px;
-            padding: 10px;
-            border-radius: 8px;
-        }
-
-        /* Optional: Style the <pre> tag inside csp_results for better formatting */
-        #csp_results pre {
-            white-space: pre-wrap;
-            /* Wrap long lines */
-            word-wrap: break-word;
-            /* Break long words */
-        }
-
-        /* Styles for headers sections */
-        #request_headers,
-        #response_headers {
-            max-height: 300px;
-            /* Adjust as needed */
-            overflow-y: auto;
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        #request_headers table,
-        #response_headers table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        #request_headers th,
-        #response_headers th,
-        #request_headers td,
-        #response_headers td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
-        }
-    </style>
+    <!-- External dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js" crossorigin="anonymous" defer></script>
 </head>
 
 <body>
-    <div class="container">
-        <h1>Domain Keep-Alive Analyzer</h1>
-        <div class="form-container">
-            <form id="domainForm">
-                <div class="form-group" style="display: flex; align-items: center;">
-                    <input type="text" id="domain" name="domain" class="form-control" placeholder="Enter Domain"
-                        required style="flex: 1; margin-right: 10px;">
-                    <button type="submit" class="btn btn-primary">Analyze</button>
-                </div>
-                <div class="form-group" style="text-align: left; margin-top: 10px;">
-                    <label>
-                        <input type="checkbox" id="useCachedDns" name="useCachedDns">
-                        Use Cached DNS?
-                    </label>
-                </div>
-            </form>
+    <!-- Skip navigation link for accessibility -->
+    <a href="#main-content" class="skip-link">Skip to main content</a>
 
+    <!-- Header -->
+    <header class="header" role="banner">
+        <div class="container">
+            <h1 class="header__title">
+                <span class="header__icon" aria-hidden="true">🔍</span>
+                HTTP Keep-Alive Analyzer
+            </h1>
+            <p class="header__subtitle">
+                Analyze domain HTTP configurations, DNS records, and network performance
+            </p>
         </div>
-        <div class="content-container">
-            <div class="left-container">
-                <div class="chart-container">
-                    <canvas id="analysisChart"></canvas>
-                </div>
-                <div id="dns_results" class="analysis-section">DNS Results</div>
-                <!-- CSP Results Section -->
-                <div id="csp_results" class="analysis-section">
-                    <h3>Recommended CSP Baseline</h3>
-                    <!-- The CSP details will be populated here -->
-                </div>
-                <!-- Header Results Section -->
-                <div id="response_headers" class="analysis-section">
-                    <h3>Response Headers</h3>
-                    <!-- The Header details will be populated here -->
+    </header>
+
+    <!-- Main content -->
+    <main id="main-content" class="main" role="main">
+        <div class="container">
+
+            <!-- Analysis form -->
+            <section class="analysis-form" aria-labelledby="form-heading">
+                <h2 id="form-heading" class="visually-hidden">Domain Analysis Form</h2>
+
+                <form id="domainForm" class="form" novalidate>
+                    <div class="form__group">
+                        <label for="domain" class="form__label">
+                            Domain to analyze
+                            <span class="form__label-hint">(e.g., example.com or https://example.com)</span>
+                        </label>
+                        <div class="form__input-group">
+                            <input type="text" id="domain" name="domain" class="form__input"
+                                placeholder="Enter domain name (paths will be ignored)" required
+                                aria-describedby="domain-error" autocomplete="url" spellcheck="false">
+                            <button type="submit" class="form__submit btn btn--primary">
+                                <span class="btn__text">Analyze</span>
+                                <span class="btn__loader" aria-hidden="true"></span>
+                            </button>
+                        </div>
+                        <div id="domain-error" class="form__error" role="alert" aria-live="polite"></div>
+                    </div>
+
+                    <div class="form__options">
+                        <fieldset class="form__fieldset">
+                            <legend class="form__legend">DNS Options</legend>
+                            <label class="form__checkbox">
+                                <input type="checkbox" id="useCachedDns" name="useCachedDns"
+                                    class="form__checkbox-input">
+                                <span class="form__checkbox-label">
+                                    Use system DNS cache
+                                    <span class="form__help-text">Use your system's DNS resolver instead of Google
+                                        DNS</span>
+                                </span>
+                            </label>
+                        </fieldset>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Loading state -->
+            <div id="loading" class="loading" aria-hidden="true" role="status" aria-label="Analyzing domain">
+                <div class="loading__spinner"></div>
+                <p class="loading__text">Analyzing domain...</p>
+            </div>
+
+            <!-- Error state -->
+            <div id="error" class="error" role="alert" aria-live="assertive" aria-hidden="true">
+                <h3 class="error__title">Analysis Failed</h3>
+                <p id="error-message" class="error__message"></p>
+                <button id="retry-btn" class="btn btn--secondary">Try Again</button>
+            </div>
+
+            <!-- Results -->
+            <div id="results" class="results" aria-hidden="true">
+
+                <!-- Results summary -->
+                <section class="results-summary" aria-labelledby="summary-heading">
+                    <h2 id="summary-heading" class="results-summary__title">Analysis Summary</h2>
+                    <div id="summary-content" class="results-summary__content"></div>
+                </section>
+
+                <!-- Tab navigation -->
+                <nav class="tabs" role="tablist" aria-label="Analysis results">
+                    <button class="tabs__tab" role="tab" data-target="overview" aria-selected="true"
+                        aria-controls="overview-panel" id="overview-tab">
+                        Overview
+                    </button>
+                    <button class="tabs__tab" role="tab" data-target="dns" aria-selected="false"
+                        aria-controls="dns-panel" id="dns-tab">
+                        DNS Records
+                    </button>
+                    <button class="tabs__tab" role="tab" data-target="headers" aria-selected="false"
+                        aria-controls="headers-panel" id="headers-tab">
+                        HTTP Headers
+                    </button>
+                    <button class="tabs__tab" role="tab" data-target="tcp" aria-selected="false"
+                        aria-controls="tcp-panel" id="tcp-tab">
+                        TCP Analysis
+                    </button>
+                    <button class="tabs__tab" role="tab" data-target="csp" aria-selected="false"
+                        aria-controls="csp-panel" id="csp-tab">
+                        Security Policy
+                    </button>
+                    <button class="tabs__tab" role="tab" data-target="api" aria-selected="false"
+                        aria-controls="api-panel" id="api-tab">
+                        API Documentation
+                    </button>
+                </nav>
+
+                <!-- Tab panels -->
+                <div class="tab-panels">
+
+                    <!-- Overview panel -->
+                    <section id="overview-panel" class="tab-panel tab-panel--active" role="tabpanel"
+                        aria-labelledby="overview-tab" tabindex="0">
+                        <h3 class="tab-panel__title">Performance Overview</h3>
+                        <p class="tab-panel__description">
+                            Keep-Alive timeout values and request durations for each server IP address.
+                        </p>
+                        <div class="chart-container">
+                            <canvas id="analysisChart" class="chart" role="img"
+                                aria-label="Chart showing Keep-Alive timeouts and request durations"></canvas>
+                        </div>
+                    </section>
+
+                    <!-- DNS panel -->
+                    <section id="dns-panel" class="tab-panel" role="tabpanel" aria-labelledby="dns-tab" tabindex="0"
+                        aria-hidden="true">
+                        <h3 class="tab-panel__title">DNS Records</h3>
+                        <p class="tab-panel__description">
+                            CNAME and A records for the analyzed domain with TTL information.
+                        </p>
+                        <div id="dns-results" class="results-content"></div>
+                    </section>
+
+                    <!-- Headers panel -->
+                    <section id="headers-panel" class="tab-panel" role="tabpanel" aria-labelledby="headers-tab"
+                        tabindex="0" aria-hidden="true">
+                        <h3 class="tab-panel__title">HTTP Headers Analysis</h3>
+                        <p class="tab-panel__description">
+                            Response headers from each server, highlighting differences between servers.
+                        </p>
+                        <div id="headers-results" class="results-content"></div>
+                    </section>
+
+                    <!-- TCP panel -->
+                    <section id="tcp-panel" class="tab-panel" role="tabpanel" aria-labelledby="tcp-tab" tabindex="0"
+                        aria-hidden="true">
+                        <h3 class="tab-panel__title">TCP Connection Analysis</h3>
+                        <p class="tab-panel__description">
+                            Low-level TCP connection details including handshake analysis and options.
+                        </p>
+                        <div id="tcp-results" class="results-content"></div>
+                    </section>
+
+                    <!-- CSP panel -->
+                    <section id="csp-panel" class="tab-panel" role="tabpanel" aria-labelledby="csp-tab" tabindex="0"
+                        aria-hidden="true">
+                        <h3 class="tab-panel__title">Content Security Policy</h3>
+                        <p class="tab-panel__description">
+                            Generated CSP recommendations based on page analysis.
+                        </p>
+                        <div id="csp-results" class="results-content"></div>
+                    </section>
+
+                    <!-- API Documentation panel -->
+                    <section id="api-panel" class="tab-panel" role="tabpanel" aria-labelledby="api-tab" tabindex="0"
+                        aria-hidden="true">
+                        <h3 class="tab-panel__title">API Documentation</h3>
+                        <p class="tab-panel__description">
+                            Use the HTTP Keep-Alive Analyzer programmatically with these JSON API endpoints.
+                        </p>
+                        <div class="api-documentation">
+
+                            <div class="api-section">
+                                <h4>Health Check</h4>
+                                <p>Check if the service is running and discover available endpoints. <strong>This
+                                        endpoint does not analyze any domain</strong> - it's purely for service health
+                                    monitoring and API discovery.</p>
+                                <pre><code>GET /api/health</code></pre>
+                                <p><strong>No parameters required.</strong></p>
+                                <p><strong>Example:</strong></p>
+                                <pre><code>curl http://localhost:3000/api/health</code></pre>
+                                <p><strong>Response:</strong></p>
+                                <pre><code>{
+  "status": "ok",
+  "service": "HTTP Keep-Alive Analyzer",
+  "version": "2.0",
+  "endpoints": {
+    "analyze_get": "/api/analyze?domain=example.com&useCachedDns=false",
+    "analyze_post": "/api/analyze (POST with JSON body)",
+    "health": "/api/health"
+  }
+}</code></pre>
+                            </div>
+
+                            <div class="api-section">
+                                <h4>Domain Analysis</h4>
+                                <p>These endpoints perform the actual domain analysis. <strong>A domain parameter is
+                                        required</strong> for all analysis endpoints.</p>
+
+                                <h5>GET Method (Query Parameters)</h5>
+                                <pre><code>GET /api/analyze?domain=example.com&useCachedDns=false</code></pre>
+                                <p><strong>Parameters:</strong></p>
+                                <ul>
+                                    <li><code>domain</code> (required): Domain to analyze</li>
+                                    <li><code>useCachedDns</code> (optional): Use system DNS cache (true/false)</li>
+                                </ul>
+                                <p><strong>Example:</strong></p>
+                                <pre><code>curl "http://localhost:3000/api/analyze?domain=google.com&useCachedDns=false"</code></pre>
+
+                                <h5>POST Method (JSON Body)</h5>
+                                <pre><code>POST /api/analyze
+Content-Type: application/json
+
+{
+  "domain": "example.com",
+  "useCachedDns": false
+}</code></pre>
+                                <p><strong>Example:</strong></p>
+                                <pre><code>curl -X POST http://localhost:3000/api/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"domain":"google.com","useCachedDns":false}'</code></pre>
+                            </div>
+
+                            <div class="api-section">
+                                <h4>Response Format</h4>
+                                <p>Both GET and POST methods return comprehensive JSON with:</p>
+                                <ul>
+                                    <li><strong>DNS Records:</strong> CNAME and A records with TTL</li>
+                                    <li><strong>HTTP Headers:</strong> Response headers from each server</li>
+                                    <li><strong>Keep-Alive Settings:</strong> Timeout and connection info</li>
+                                    <li><strong>CDN Detection:</strong> CDN providers with confidence levels</li>
+                                    <li><strong>Server Fingerprinting:</strong> Server type, version, platform</li>
+                                    <li><strong>TCP Analysis:</strong> Connection details and quality metrics</li>
+                                    <li><strong>CSP Evaluation:</strong> Security policy analysis</li>
+                                </ul>
+                            </div>
+
+                            <div class="api-section">
+                                <h4>Error Handling</h4>
+                                <p>API endpoints return structured error responses:</p>
+                                <pre><code>{
+  "error": "Missing 'domain' parameter",
+  "status": 400
+}</code></pre>
+                                <p><strong>Common Error Codes:</strong></p>
+                                <ul>
+                                    <li><code>400</code>: Bad Request (invalid domain, missing parameters)</li>
+                                    <li><code>405</code>: Method Not Allowed</li>
+                                    <li><code>500</code>: Internal Server Error (analysis failed)</li>
+                                </ul>
+                            </div>
+
+                            <div class="api-section">
+                                <h4>CORS Support</h4>
+                                <p>All API endpoints include CORS headers for cross-origin requests.</p>
+                            </div>
+
+                        </div>
+                    </section>
                 </div>
             </div>
-            <div class="results-container">
-                <div id="results" class="analysis-section">Analysis Results</div>
-                <!-- TCP Results Section -->
-                <div id="tcp_results" class="analysis-section">
-                    <h3>TCP Results</h3>
-                    <table id="tcp_header" class="tcp-header-table"></table>
-                </div>
-            </div>
         </div>
+    </main>
 
-    </div>
-    <script src="app.js"></script>
+    <!-- Footer -->
+    <footer class="footer" role="contentinfo">
+        <div class="container">
+            <p class="footer__text">
+                &copy; 2025 HTTP Keep-Alive Analyzer.
+                <a href="https://github.com/Mikej81/http-keepalive" class="footer__link">View source code</a>
+            </p>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="./app.js" defer></script>
 </body>
 
 </html>
