@@ -1,6 +1,6 @@
 # HTTP Keep-Alive Analyzer
 
-A web server fingerprinting and analysis tool that helps you understand how web servers handle connections, what technologies they use, and how they're configured.
+A web server fingerprinting and analysis tool that helps understand how web servers handle connections, what technologies they use, and how they're configured.
 
 ## What Does This Tool Do?
 
