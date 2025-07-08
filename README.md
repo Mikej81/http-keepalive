@@ -1,6 +1,6 @@
 # HTTP Keep-Alive Analyzer
 
-A comprehensive web server fingerprinting and analysis tool that helps you understand how web servers handle connections, what technologies they use, and how they're configured.
+A web server fingerprinting and analysis tool that helps you understand how web servers handle connections, what technologies they use, and how they're configured.
 
 ## What Does This Tool Do?
 
@@ -68,25 +68,33 @@ Once running, open your browser to `http://localhost:3000`.
 ## Understanding the Results
 
 ### Summary Tab
+
 Shows the big picture: server type, response time, CDN detection, and an overview chart of performance metrics.
 
 ### DNS Tab
+
 Reveals how the domain name translates to IP addresses:
-- **CNAME records**: Domain aliases (like www.example.com pointing to example.com)
+
+- **CNAME records**: Domain aliases (like <www.example.com> pointing to example.com)
 - **A records**: The actual IP addresses the domain resolves to
 - **TTL values**: How long DNS resolvers should cache this information
 
 ### Headers Tab
+
 Displays the HTTP headers sent by the server, which reveal configuration details and can highlight differences between multiple servers (useful for load-balanced setups).
 
 ### TCP Analysis Tab
+
 Shows low-level network connection details:
+
 - **Connection timing**: How long it takes to establish a connection
 - **TCP flags**: Technical details about how the connection was established
 - **Quality metrics**: Whether the connection is performing well
 
 ### Security Policy Tab
+
 Analyzes the website's Content Security Policy (CSP):
+
 - **Current policy**: What security restrictions are in place
 - **Recommendations**: Suggestions for improving security
 - **Risk assessment**: Potential security vulnerabilities
@@ -114,11 +122,13 @@ GET /api/health
 **No parameters needed.** This endpoint doesn't analyze any domain—it just tells you if the service is working.
 
 **Example request:**
+
 ```bash
 curl http://localhost:3000/api/health
 ```
 
 **Example response:**
+
 ```json
 {
   "status": "ok",
@@ -145,10 +155,12 @@ GET /api/analyze?domain=example.com&useCachedDns=false
 ```
 
 **Parameters:**
+
 - `domain` (required): The website to analyze (e.g., `google.com`, `https://example.com/path`)
 - `useCachedDns` (optional): Whether to use your system's DNS cache (`true` or `false`, defaults to `false`)
 
 **Example request:**
+
 ```bash
 curl "http://localhost:3000/api/analyze?domain=google.com&useCachedDns=false"
 ```
@@ -163,6 +175,7 @@ Content-Type: application/json
 ```
 
 **Request body:**
+
 ```json
 {
   "domain": "example.com",
@@ -171,6 +184,7 @@ Content-Type: application/json
 ```
 
 **Example request:**
+
 ```bash
 curl -X POST http://localhost:3000/api/analyze \
   -H "Content-Type: application/json" \
@@ -179,7 +193,7 @@ curl -X POST http://localhost:3000/api/analyze \
 
 ### Understanding API Responses
 
-Both GET and POST methods return the same comprehensive JSON structure. Here's what each section contains:
+Both GET and POST methods return the same JSON structure. Here's what each section contains:
 
 ```json
 {
@@ -242,6 +256,7 @@ API endpoints return structured error responses:
 ```
 
 Common error codes:
+
 - `400`: Bad Request (invalid domain, missing parameters)
 - `405`: Method Not Allowed
 - `500`: Internal Server Error (analysis failed)
@@ -253,22 +268,26 @@ The API includes Cross-Origin Resource Sharing (CORS) headers, which means you c
 #### Key Response Fields Explained
 
 **DNS Information:**
+
 - `cnameRecords`: Domain aliases (redirects from one domain to another)
 - `aRecords`: IP addresses and their cache duration (TTL)
 
 **CDN Detection:**
+
 - `detected`: Whether a CDN was found
 - `confidence`: How sure we are (High, Medium, Low)
 - `evidence`: What clues led to this detection
 - `provider`: Which CDN service (Cloudflare, AWS CloudFront, etc.)
 
 **Server Fingerprinting:**
+
 - `serverType`: Web server software (Apache, Nginx, IIS, etc.)
 - `version`: Software version if detectable
 - `platform`: Operating system/platform
 - `confidence`: How certain the detection is
 
 **Performance Metrics:**
+
 - `requestDuration`: How long the request took (in milliseconds)
 - `keepAliveTimeout`: How long the server keeps connections open
 - `tlsVersion`: Which version of TLS/SSL is being used
@@ -280,6 +299,7 @@ The API includes Cross-Origin Resource Sharing (CORS) headers, which means you c
 HTTP Keep-Alive is a feature that allows multiple HTTP requests to reuse the same TCP connection. Without it, each request would need to establish a new connection, which is slower and uses more resources.
 
 **Key concepts:**
+
 - **Keep-Alive Timeout**: How long the server waits before closing an idle connection
 - **Max Requests**: How many requests can use the same connection
 - **Connection Reuse**: Multiple requests sharing one TCP connection
@@ -475,7 +495,7 @@ This tool is designed for legitimate security research and system administration
 
 ## Documentation
 
-For more detailed information, see our comprehensive documentation:
+For more detailed information, see additional documentation:
 
 - **[Architecture Documentation](docs/ARCHITECTURE.md)** - Detailed explanation of the codebase structure, components, and design decisions
 - **[Deployment Guide](docs/DEPLOYMENT.md)** - Complete deployment instructions for development, staging, and production environments
@@ -494,16 +514,4 @@ The modular architecture makes it easy to add new analysis methods or customize 
 
 ## Contributing to the Project
 
-We welcome contributions! Please see our documentation for:
-
-- **Architecture details** in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- **Deployment guidelines** in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)
-- **API specifications** in the web interface
-
-When contributing:
-
-1. Follow Go best practices and idioms
-2. Write tests for new functionality
-3. Update documentation for any changes
-4. Ensure the web interface remains accessible
-5. Test with various types of websites (CDNs, load balancers, etc.)
+I welcome contributions!
