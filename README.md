@@ -1,10 +1,10 @@
 # HTTP Keep-Alive Analyzer
 
-A web server fingerprinting and analysis tool that helps understand how web servers handle connections, what technologies they use, and how they're configured.
+A web server fingerprinting and analysis tool that helps understand how a web servers handles connections, what technologies used, and how they're configured.  Originally designed to help configure F5 customers configure XC Origin pools with more data available.
 
 ## What Does This Tool Do?
 
-Think of this as a "health check" for websites, but much more detailed. When you visit a website, your browser makes an HTTP connection to a server. This tool analyzes that connection process to reveal:
+When you visit a website, your browser makes an HTTP connection to a server. This tool analyzes that connection process to reveal:
 
 - **How long the server keeps connections open** (Keep-Alive settings)
 - **What web server software is running** (Apache, Nginx, etc.)
@@ -13,7 +13,7 @@ Think of this as a "health check" for websites, but much more detailed. When you
 - **Security policies** (Content Security Policy analysis)
 - **Low-level network details** (TCP connection behavior)
 
-This information is valuable for security researchers, system administrators, and developers who want to understand web infrastructure.
+This information is (potentially) valuable for security researchers, system administrators, developers, and anyone that wants to understand web infrastructure.
 
 ## Features
 
@@ -101,7 +101,7 @@ Analyzes the website's Content Security Policy (CSP):
 
 ## API Documentation
 
-The tool provides REST API endpoints for programmatic access. This means you can integrate it into your own applications or scripts.
+The tool now provides REST API endpoints for programmatic access. This means you can integrate it into your own applications or scripts, cronjobs, etc.
 
 ### API Endpoints Overview
 
@@ -119,7 +119,7 @@ The tool provides REST API endpoints for programmatic access. This means you can
 GET /api/health
 ```
 
-**No parameters needed.** This endpoint doesn't analyze any domain—it just tells you if the service is working.
+**No parameters needed.** This endpoint doesn't analyze any domain, it just tells you if the service is working.
 
 **Example request:**
 
